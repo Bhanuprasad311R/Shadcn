@@ -17,20 +17,50 @@ interface Props {
 
 export function UsersDeleteDialog({ open, onOpenChange, currentRow }: Props) {
   const [value, setValue] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (value.trim() !== currentRow.username) return
 
-    onOpenChange(false)
-    showSubmittedData(currentRow, 'The following user has been deleted:')
+    setIsLoading(true)
+    setError(null)
+    setSuccessMessage(null)
+
+    try {
+      // Make API call to delete the user
+      const response = await fetch(`http://localhost:4000/users/delete/${currentRow.username}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Something went wrong')
+      }
+
+      // On success, close dialog and show success message
+      setSuccessMessage(`The following user has been deleted: ${currentRow.username}`)
+      onOpenChange(false)
+
+      // Optionally, log or display the submitted data
+      showSubmittedData(currentRow, 'The following user has been deleted:')
+    } catch (err) {
+      setError((err as Error).message || 'Failed to delete user')
+    } finally {
+      setIsLoading(false)
+    }
   }
+
+  // Disable delete button if username doesn't match or it's in the loading state
+  const isDeleteDisabled = value.trim() !== currentRow.username || isLoading
 
   return (
     <ConfirmDialog
       open={open}
       onOpenChange={onOpenChange}
       handleConfirm={handleDelete}
-      disabled={value.trim() !== currentRow.username}
+      disabled={isDeleteDisabled} // Ensure the button is disabled properly
       title={
         <span className='text-destructive'>
           <IconAlertTriangle
@@ -65,12 +95,26 @@ export function UsersDeleteDialog({ open, onOpenChange, currentRow }: Props) {
           <Alert variant='destructive'>
             <AlertTitle>Warning!</AlertTitle>
             <AlertDescription>
-              Please be carefull, this operation can not be rolled back.
+              Please be careful, this operation cannot be undone.
             </AlertDescription>
           </Alert>
+
+          {successMessage && (
+            <Alert variant='default'> {/* Keep 'default' for success */}
+              <AlertTitle>Success!</AlertTitle>
+              <AlertDescription>{successMessage}</AlertDescription>
+            </Alert>
+          )}
+
+          {error && (
+            <Alert variant='destructive'>
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
         </div>
       }
-      confirmText='Delete'
+      confirmText={isLoading ? 'Deleting...' : 'Delete'}
       destructive
     />
   )

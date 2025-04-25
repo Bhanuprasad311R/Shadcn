@@ -3,7 +3,6 @@
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { showSubmittedData } from '@/utils/show-submitted-data'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -26,6 +25,7 @@ import { PasswordInput } from '@/components/password-input'
 import { SelectDropdown } from '@/components/select-dropdown'
 import { userTypes } from '../data/data'
 import { User } from '../data/schema'
+import axios from 'axios'
 
 const formSchema = z
   .object({
@@ -117,13 +117,48 @@ export function UsersActionDialog({ currentRow, open, onOpenChange }: Props) {
         },
   })
 
-  const onSubmit = (values: UserForm) => {
-    form.reset()
-    showSubmittedData(values)
-    onOpenChange(false)
-  }
+  // const onSubmit = (values: UserForm) => {
+  //   form.reset()
+  //   showSubmittedData(values)
+  //   onOpenChange(false)
+  // }
 
   const isPasswordTouched = !!form.formState.dirtyFields.password
+
+  const onSubmit = async (values: UserForm) => {
+    try {
+      const payload = {
+        name: values.firstName,
+        username: values.username,
+        email: values.email,
+        phone_number: values.phoneNumber,
+        password: values.password,
+        confirmPassword: values.confirmPassword,
+        role: values.role,
+      }
+
+      if (isEdit) {
+        await axios.put(`http://localhost:4000/users/${currentRow?.id}`, payload)
+        alert('User updated successfully!')
+      }
+       else {
+        await axios.post('http://localhost:4000/users/signup', payload)
+        alert('User created successfully!')
+      }
+
+      form.reset()
+      onOpenChange(false)
+      // onRefresh()
+    } catch (error: unknown) {
+      console.error('Caught error:', error)
+
+      if (axios.isAxiosError(error)) {
+        alert(error.response?.data?.error || 'Something went wrong!')
+      } else {
+        alert('An error occurred. Please try again later.')
+      }
+    }
+  }
 
   return (
     <Dialog
@@ -146,6 +181,7 @@ export function UsersActionDialog({ currentRow, open, onOpenChange }: Props) {
             <form
               id='user-form'
               onSubmit={form.handleSubmit(onSubmit)}
+              // onSubmit={form.handleSubmit(onSubmit)}
               className='space-y-4 p-0.5'
             >
               <FormField

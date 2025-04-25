@@ -9,11 +9,66 @@ import { UsersPrimaryButtons } from './components/users-primary-buttons'
 import { UsersTable } from './components/users-table'
 import UsersProvider from './context/users-context'
 import { userListSchema } from './data/schema'
-import { users } from './data/users'
+import { useEffect, useState } from 'react'
+import axios from 'axios'
+// import { users } from './data/users'
+interface UserResponse {
+  id: number;
+  name: string;
+  username: string;
+  email: string;
+  phone_number: string;
+  status: string;
+  role: string;
+  // created_at: Date;
+  // updated_at: Date;
+}
+
+interface User {
+  id: number;
+  firstName: string;
+  lastName: string;
+  username: string;
+  email: string;
+  phoneNumber: string;
+  status: string;
+  role: string;
+  // createdAt: Date;
+  // updatedAt: Date;
+}
 
 export default function Users() {
   // Parse user list
-  const userList = userListSchema.parse(users)
+  const [usersdata, setUsers] = useState<User[]>([]);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get<{ users: UserResponse[] }>('http://localhost:4000/users');
+      const res: UserResponse[] = response.data.users;
+
+      const transformedUsers: User[] = res.map((item) => ({
+        id: item.id,
+        firstName: item.name,
+        lastName: '', // Placeholder for last name
+        username: item.username,
+        email: item.email.toLowerCase(),
+        phoneNumber: item.phone_number,
+        status: item.status,
+        role: item.role,
+        createdAt: new  Date(),
+        updatedAt: new Date(),
+      }));
+
+      setUsers(transformedUsers);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+  const userList = userListSchema.parse(usersdata)
 
   return (
     <UsersProvider>
